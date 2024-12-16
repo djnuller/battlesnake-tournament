@@ -6,10 +6,10 @@ services:
     container_name: app
     ports:
       - "8080:8080"
-    volumes:
-      - .:/app
     depends_on:
       - postgres
+    # Optional wait-for-it setup to handle database readiness
+    command: ["/wait-for-it.sh", "postgres:5432", "--", "java", "-jar", "app.jar"]
 
   postgres:
     image: postgres:15
