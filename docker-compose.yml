@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  app:
+    build: .
+    container_name: app
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@postgres:5432/mydatabase
+
   postgres:
     image: postgres:15
     container_name: postgres
