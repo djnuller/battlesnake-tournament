@@ -10,8 +10,6 @@ services:
       - .:/app
     depends_on:
       - postgres
-    environment:
-      DATABASE_URL: postgres://myuser:mypassword@postgres:5432/mydatabase
 
   postgres:
     image: postgres:15
