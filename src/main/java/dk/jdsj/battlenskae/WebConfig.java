@@ -7,16 +7,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig {
-
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("*")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedOrigins("*") // Allow any origin
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Allowed methods
+                        .allowedHeaders("*") // Allow all headers
+                        .allowCredentials(false); // Optional: disable credentials
             }
         };
     }
