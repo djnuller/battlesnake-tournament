@@ -31,9 +31,9 @@ public class TournamentController {
     }
 
     @CrossOrigin(origins = "*")
-    @PostMapping("/tournament/{id}/generate-matches")
-    public Tournament generateMatches(@PathVariable int id) {
-        return tournamentService.generateMatches(id);
+    @PostMapping("/tournament/{id}/generate-matches/{isOneVsOne}")
+    public Tournament generateMatches(@PathVariable int id, @PathVariable boolean isOneVsOne) {
+        return tournamentService.generateMatches(id, isOneVsOne);
     }
 
     @CrossOrigin(origins = "*")
@@ -59,8 +59,8 @@ public class TournamentController {
     }
 
     @CrossOrigin(origins = "*")
-    @PostMapping("/tournament/{id}/advance-round")
-    public Tournament advanceRound(@PathVariable int id) {
-        return tournamentService.advanceWinnersToNextRound(id);
+    @PostMapping("/tournament/{id}/advance-round/{isOneVsOne}")
+    public Tournament advanceRound(@PathVariable int id, @PathVariable boolean isOneVsOne) {
+        return tournamentService.advanceWinnersToNextRound(id, isOneVsOne);
     }
 }

@@ -13,10 +13,12 @@ import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,10 +36,8 @@ public class MatchService {
     @SneakyThrows
     public void startGame(int tournamentId) {
         var tournament = tournamentService.getTournamentById(tournamentId);
-
-
         // Create a fixed thread pool for running matches concurrently
-        var executor = Executors.newFixedThreadPool(10);
+        var executor = Executors.newFixedThreadPool(3);
 
         getNextPlayableRound(tournamentId).ifPresent(round -> {
             log.info("Starting matches for round {}", round.getRoundNumber());
@@ -91,25 +91,64 @@ public class MatchService {
 
         var players = match.getPlayers();
         var winCount = players.stream().collect(Collectors.toMap(Player::getId, p -> 0));
+        var executor = Executors.newFixedThreadPool(2);
+        ArrayList<Future<Map<Integer, Integer>>> gameResults = new ArrayList<>();
 
         try {
             for (int i = 0; i < 100; i++) {
-                var command = buildCommand(players);
-                var output = runGame(command);
-                var winner = parseWinner(output);
+                int iteration = i; // Capture the iteration for logging
+                gameResults.add(executor.submit(() -> {
+                    try {
+                        var command = buildCommand(players);
+                        var output = runGame(command);
+                        var winner = parseWinner(output);
 
-                if (winner != null) {
-                    log.info("Match {} iteration {} winner: {}", matchId, i, winner.getSnakeName());
-                    winCount.put(winner.getId(), winCount.get(winner.getId()) + 1);
-                }
+                        if (winner != null) {
+                            log.info("Match {} iteration {} winner: {}", matchId, iteration, winner.getSnakeName());
+                            return Map.of(winner.getId(), 1); // Single win for this game
+                        }
+                    } catch (Exception e) {
+                        log.error("Error running game for match {} iteration {}", matchId, iteration, e);
+                    }
+                    return Map.of(); // Return an empty map for no winner or error
+                }));
+            }
+
+            // Wait for all games to complete and aggregate results
+            for (Future<Map<Integer, Integer>> result : gameResults) {
+                var gameWinCounts = result.get(); // Wait for each game's result
+                gameWinCounts.forEach((playerId, wins) -> {
+                    winCount.put(playerId, winCount.get(playerId) + wins);
+                    savePlayerWinCount(match, playerId, wins); // Save the win count to the database
+                });
             }
         } catch (Exception e) {
-            log.info("Error running match {}", matchId);
+            log.error("Error running match {}: {}", matchId, e.getMessage());
+            executor.shutdownNow();
             return runGames(matchId, match, tries + 1);
+        } finally {
+            executor.shutdown(); // Gracefully shutdown the executor
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executor.shutdownNow(); // Force shutdown if not terminated
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Executor interrupted during shutdown", e);
+            }
         }
 
         return winCount;
     }
+
+
+    private void savePlayerWinCount(Match match, Integer playerId, int wins) {
+        var player = playerService.getPlayerById(playerId);
+        match.addWin(player);
+        matchRepository.save(match);
+    }
+
+
 
 
     private String buildCommand(List<Player> players) {

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
@@ -53,12 +54,12 @@ public class TournamentService {
         return tournamentRepository.save(tournament);
     }
 
-    private List<List<Integer>> sortPlayersIntoMatches(int numPlayers) {
+    private List<List<Integer>> sortPlayersIntoMatches(int numPlayers, boolean isOneVsOne) {
         log.info("Generating match structure for " + numPlayers + " players");
         List<List<Integer>> rounds = new ArrayList<>();
 
         while (numPlayers > 1) {
-            List<Integer> matches = getMatchesForRound(numPlayers);
+            List<Integer> matches = getMatchesForRound(numPlayers, isOneVsOne);
             log.info("Round with " + matches.size() + " matches: " + matches);
 
             rounds.add(matches);
@@ -83,45 +84,58 @@ public class TournamentService {
         return orderedRounds;
     }
 
-    private static List<Integer> getMatchesForRound(int numPlayers) {
+    private static List<Integer> getMatchesForRound(int numPlayers, boolean isOneVsOne) {
         List<Integer> matches = new ArrayList<>();
 
-        if (numPlayers % 4 == 0) {
-            for (int i = 0; i < numPlayers / 4; i++) {
-                matches.add(4);
+
+        if (isOneVsOne) {
+            // Create 1v1 matches for all players
+            for (int i = 0; i < numPlayers / 2; i++) {
+                matches.add(2);
             }
-        } else if (numPlayers % 4 == 3) {
-            for (int i = 0; i < numPlayers / 4; i++) {
-                matches.add(4);
+            if (numPlayers % 2 != 0) {
+                matches.add(1); // Handle odd player out
             }
-            matches.add(3);
-        } else if (numPlayers % 4 == 2) {
-            for (int i = 0; i < (numPlayers - 6) / 4; i++) {
-                matches.add(4);
+        } else {
+            if (numPlayers % 4 == 0) {
+                for (int i = 0; i < numPlayers / 4; i++) {
+                    matches.add(4);
+                }
+            } else if (numPlayers % 4 == 3) {
+                for (int i = 0; i < numPlayers / 4; i++) {
+                    matches.add(4);
+                }
+                matches.add(3);
+            } else if (numPlayers % 4 == 2) {
+                for (int i = 0; i < (numPlayers - 6) / 4; i++) {
+                    matches.add(4);
+                }
+                matches.add(3);
+                matches.add(3);
+            } else { // numPlayers % 4 == 1
+                for (int i = 0; i < (numPlayers - 9) / 4; i++) {
+                    matches.add(4);
+                }
+                matches.add(3);
+                matches.add(3);
+                matches.add(3);
             }
-            matches.add(3);
-            matches.add(3);
-        } else { // numPlayers % 4 == 1
-            for (int i = 0; i < (numPlayers - 9) / 4; i++) {
-                matches.add(4);
-            }
-            matches.add(3);
-            matches.add(3);
-            matches.add(3);
         }
+
+
         log.info("Matches: {}", matches);
         return matches;
     }
 
     @Transactional
-    public Tournament generateMatches(int tournamentId) {
+    public Tournament generateMatches(int tournamentId, boolean isOneVsOne) {
         // Retrieve the tournament from the database
         var tournament = tournamentRepository.findById(tournamentId).orElseThrow();
         List<Player> players = tournament.getPlayers();
         int numPlayers = players.size();
 
         // Generate the match structure for the tournament rounds
-        List<List<Integer>> matchStructure = this.sortPlayersIntoMatches(numPlayers);
+        List<List<Integer>> matchStructure = this.sortPlayersIntoMatches(numPlayers, isOneVsOne);
 
         List<Round> rounds = new ArrayList<>();
         int roundNumber = 1;
@@ -175,14 +189,14 @@ public class TournamentService {
     }
 
     @Transactional
-    public Tournament advanceWinnersToNextRound(final int tournamentId) {
+    public Tournament advanceWinnersToNextRound(final int tournamentId, boolean isOneVSOne) {
         var tournament = tournamentRepository.findById(tournamentId).orElseThrow();
         var rounds = tournament.getRounds();
 
         // Find the most recent completed round
         var lastCompletedRound = rounds.stream()
                 .filter(round -> round.getMatches().stream()
-                        .allMatch(match -> match.getWinnerPlayerId() > 0 && match.getSecondPlacePlayerId() > 0))
+                        .allMatch(match -> match.getWinnerPlayerId() > 0))
                 .reduce((first, second) -> second) // Get the last completed round
                 .orElseThrow(() -> new IllegalStateException("No completed rounds found."));
 
@@ -198,25 +212,34 @@ public class TournamentService {
 
         // Gather advancing players from the last completed round
         var advancingPlayers = lastCompletedRound.getMatches().stream()
-                .flatMap(match -> match.getPlayers().stream()
-                        .filter(player -> player.getId() == match.getWinnerPlayerId() || player.getId() == match.getSecondPlacePlayerId()))
+                .flatMap(match -> {
+                    if (isOneVSOne) {
+                        // Only winner advances in 1v1 tournaments
+                        return match.getPlayers().stream()
+                                .filter(player -> player.getId() == match.getWinnerPlayerId());
+                    } else {
+                        // Winners and second-place players advance in non-1v1 tournaments
+                        return match.getPlayers().stream()
+                                .filter(player -> player.getId() == match.getWinnerPlayerId() || player.getId() == match.getSecondPlacePlayerId());
+                    }
+                })
                 .distinct()
+                .sorted(Comparator.comparing(Player::getId)) // Ensure players are sorted by ID
                 .toList();
 
         nextRound.setPlayerCount(advancingPlayers.size());
 
         // Distribute players to the matches in the next round
-        distributePlayersToMatches(advancingPlayers, nextRound.getMatches());
+        distributePlayersToMatchesByClosestID(advancingPlayers, nextRound.getMatches());
 
         return tournamentRepository.save(tournament);
     }
 
-    private static void distributePlayersToMatches(List<Player> players, List<Match> matches) {
-        Iterator<Player> playerIterator = players.iterator();
+    private static void distributePlayersToMatchesByClosestID(List<Player> players, List<Match> matches) {
         int matchIndex = 0;
 
-        while (playerIterator.hasNext()) {
-            Player player = playerIterator.next();
+        // Loop through players and assign them to the matches by closest ID logic
+        for (Player player : players) {
             Match match = matches.get(matchIndex);
 
             if (match.getPlayers() == null) {
@@ -228,8 +251,10 @@ public class TournamentService {
             // Move to the next match, wrap around if at the end
             matchIndex = (matchIndex + 1) % matches.size();
         }
-    }
 
+        // Ensure matches are sorted by their index
+        matches.sort(Comparator.comparing(Match::getId));
+    }
     public Tournament getTournamentById(int id) {
         return tournamentRepository.findWithRoundsById(id);
     }
