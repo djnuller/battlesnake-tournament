@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -37,5 +38,6 @@ public class Tournament {
     List<Player> players;
 
     @OneToMany(fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Round> rounds;
 }
