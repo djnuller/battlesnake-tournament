@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -35,5 +36,6 @@ public class Round {
 
     @OneToMany(fetch = FetchType.EAGER)
     @JsonManagedReference // Handle serialization of matches
+    @OrderBy("id ASC")
     private List<Match> matches;
 }
