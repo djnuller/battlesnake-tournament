@@ -1,6 +1,7 @@
 package dk.jdsj.battlenskae.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -34,7 +35,7 @@ public class Round {
     private int roundNumber;
     private int playerCount;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JsonManagedReference // Handle serialization of matches
     @OrderBy("id ASC")
     private List<Match> matches;

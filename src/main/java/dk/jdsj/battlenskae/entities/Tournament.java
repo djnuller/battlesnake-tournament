@@ -1,5 +1,6 @@
 package dk.jdsj.battlenskae.entities;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -16,6 +17,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Cascade;
 
 import java.util.List;
 import java.util.Map;
@@ -33,11 +35,11 @@ public class Tournament {
     @SequenceGenerator(name = "tournament_seq", sequenceName = "tournament_id_seq", allocationSize = 1)
     private int id;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.LAZY, cascade =CascadeType.ALL )
     @BatchSize(size = 10)
     List<Player> players;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @OrderBy("id ASC")
     private List<Round> rounds;
 }

@@ -1,6 +1,7 @@
 package dk.jdsj.battlenskae.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -42,7 +43,7 @@ public class Match {
     private int winnerPlayerId;
     private int secondPlacePlayerId;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private List<Player> players;
 
     @ManyToOne
