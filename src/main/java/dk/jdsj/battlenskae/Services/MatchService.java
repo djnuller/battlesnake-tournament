@@ -152,7 +152,7 @@ public class MatchService {
 
 
     private String buildCommand(List<Player> players) {
-        var command = new StringBuilder("./battlesnake play -W 11 -H 11");
+        var command = new StringBuilder("./battlesnake play --timeout 1000 -W 11 -H 11");
         players.forEach(p -> {
             command.append(" --name ").append(p.getId()).append(" --url ").append(p.getSnakeUrl());
         });
