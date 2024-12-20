@@ -221,14 +221,15 @@ public class TournamentService {
                         return match.getPlayers().stream()
                                 .filter(player -> player.getId() == match.getWinnerPlayerId());
                     } else {
-                        // Winners and second-place players advance in non-1v1 tournaments
+                        // Winners and second-place players advance
                         return match.getPlayers().stream()
-                                .filter(player -> player.getId() == match.getWinnerPlayerId() || player.getId() == match.getSecondPlacePlayerId());
+                                .filter(player -> player.getId() == match.getWinnerPlayerId()
+                                        || player.getId() == match.getSecondPlacePlayerId());
                     }
                 })
-                .distinct()
-                .sorted(Comparator.comparing(Player::getId)) // Ensure players are sorted by ID
+                .distinct() // Keep distinct players, but no sorting by ID
                 .toList();
+
 
         nextRound.setPlayerCount(advancingPlayers.size());
 
