@@ -214,7 +214,7 @@ public class TournamentService {
         }
 
         // Gather advancing players from the last completed round
-        var advancingPlayers = lastCompletedRound.getMatches().stream()
+        var advancingPlayers = lastCompletedRound.getMatches().stream().sorted()
                 .flatMap(match -> {
                     if (isOneVSOne) {
                         // Only winner advances in 1v1 tournaments
