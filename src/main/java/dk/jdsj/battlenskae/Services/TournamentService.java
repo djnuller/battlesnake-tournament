@@ -135,7 +135,7 @@ public class TournamentService {
         List<Player> players = tournament.getPlayers();
         int numPlayers = players.size();
 
-        Collections.shuffle(players, new Random());
+        Collections.shuffle(players);
 
         // Generate the match structure for the tournament rounds
         List<List<Integer>> matchStructure = this.sortPlayersIntoMatches(numPlayers, isOneVsOne);
@@ -145,8 +145,6 @@ public class TournamentService {
 
         for (List<Integer> matchCounts : matchStructure) {
             List<Match> matches = new ArrayList<>();
-
-            Collections.shuffle(players, new Random());
 
             for (Integer matchSize : matchCounts) {
                 Match match;
