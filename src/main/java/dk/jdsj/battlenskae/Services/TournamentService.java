@@ -213,8 +213,11 @@ public class TournamentService {
             throw new IllegalStateException("Next round already has players assigned.");
         }
 
-        // Gather advancing players from the last completed round
-        var advancingPlayers = lastCompletedRound.getMatches().stream().sorted()
+        // Sort matches by ID to ensure correct order
+        lastCompletedRound.getMatches().sort(Comparator.comparing(Match::getId));
+
+        // Gather advancing players from the last completed round, maintaining bracket order
+        var advancingPlayers = lastCompletedRound.getMatches().stream()
                 .flatMap(match -> {
                     if (isOneVSOne) {
                         // Only winner advances in 1v1 tournaments
@@ -227,37 +230,43 @@ public class TournamentService {
                                         || player.getId() == match.getSecondPlacePlayerId());
                     }
                 })
-                .distinct() // Keep distinct players, but no sorting by ID
                 .toList();
-
 
         nextRound.setPlayerCount(advancingPlayers.size());
 
         // Distribute players to the matches in the next round
-        distributePlayersToMatchesByClosestID(advancingPlayers, nextRound.getMatches());
+        distributePlayersInBracketFormat(advancingPlayers, nextRound.getMatches());
 
         return tournamentRepository.save(tournament);
     }
 
-    private static void distributePlayersToMatchesByClosestID(List<Player> players, List<Match> matches) {
-        int matchIndex = 0;
+    private static void distributePlayersInBracketFormat(List<Player> players, List<Match> matches) {
+        // Initialize all matches with empty player lists
+        matches.forEach(match -> match.setPlayers(new ArrayList<>()));
 
-        // Loop through players and assign them to the matches by closest ID logic
-        for (Player player : players) {
-            Match match = matches.get(matchIndex);
-
-            if (match.getPlayers() == null) {
-                match.setPlayers(new ArrayList<>());
-            }
-
-            match.getPlayers().add(player);
-
-            // Move to the next match, wrap around if at the end
-            matchIndex = (matchIndex + 1) % matches.size();
-        }
-
-        // Ensure matches are sorted by their index
+        // Sort matches by their ID to ensure correct order
         matches.sort(Comparator.comparing(Match::getId));
+
+        // Calculate how many players should be in each match
+        int playersPerMatch = (int) Math.ceil((double) players.size() / matches.size());
+
+        // Distribute players according to bracket format
+        for (int i = 0; i < players.size(); i += 2) {
+            // Calculate which match these players should go to
+            int matchIndex = i / 2;
+
+            if (matchIndex < matches.size()) {
+                Match currentMatch = matches.get(matchIndex);
+
+                // Add first player
+                currentMatch.getPlayers().add(players.get(i));
+
+                // Add second player if it exists
+                if (i + 1 < players.size()) {
+                    currentMatch.getPlayers().add(players.get(i + 1));
+                }
+            }
+        }
     }
     public Tournament getTournamentById(int id) {
         return tournamentRepository.findWithRoundsById(id);
