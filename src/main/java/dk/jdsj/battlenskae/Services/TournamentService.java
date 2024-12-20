@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -134,7 +135,7 @@ public class TournamentService {
         List<Player> players = tournament.getPlayers();
         int numPlayers = players.size();
 
-        Collections.shuffle(players);
+        Collections.shuffle(players, new Random());
 
         // Generate the match structure for the tournament rounds
         List<List<Integer>> matchStructure = this.sortPlayersIntoMatches(numPlayers, isOneVsOne);
@@ -144,6 +145,8 @@ public class TournamentService {
 
         for (List<Integer> matchCounts : matchStructure) {
             List<Match> matches = new ArrayList<>();
+
+            Collections.shuffle(players, new Random());
 
             for (Integer matchSize : matchCounts) {
                 Match match;
