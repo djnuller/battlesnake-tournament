@@ -95,7 +95,7 @@ public class MatchService {
         ArrayList<Future<Map<Integer, Integer>>> gameResults = new ArrayList<>();
 
         try {
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 100; i++) {
                 int iteration = i; // Capture the iteration for logging
                 gameResults.add(executor.submit(() -> {
                     try {
