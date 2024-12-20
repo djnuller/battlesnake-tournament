@@ -37,7 +37,7 @@ public class MatchService {
     public void startGame(int tournamentId) {
         var tournament = tournamentService.getTournamentById(tournamentId);
         // Create a fixed thread pool for running matches concurrently
-        var executor = Executors.newFixedThreadPool(3);
+        var executor = Executors.newFixedThreadPool(4);
 
         getNextPlayableRound(tournamentId).ifPresent(round -> {
             log.info("Starting matches for round {}", round.getRoundNumber());
